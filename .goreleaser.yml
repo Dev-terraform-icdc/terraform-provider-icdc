@@ -42,7 +42,7 @@ signs:
       - "--detach-sign"
       - "${artifact}"
 changelog:
-  use: github
+  use: github-native
   sort: asc
   groups:
     - title: '🚀 Features'

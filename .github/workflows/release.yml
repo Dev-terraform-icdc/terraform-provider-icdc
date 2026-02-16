@@ -8,8 +8,28 @@ permissions:
   contents: write
 
 jobs:
-  goreleaser:
+  build_check:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: 'go.mod'
+
+      - name: Check Build
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          args: build --snapshot --clean
+  
+  release:
+    needs: build_check
+    runs-on: ubuntu-latest
+    environment: production
 
     steps:
       - name: Checkout
@@ -21,7 +41,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
-          cache: true
 
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
@@ -30,7 +49,7 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
 
-      - name: Run GoReleaser
+      - name: Run GoReleaser (Final)
         uses: goreleaser/goreleaser-action@v5
         with:
           args: release --clean
