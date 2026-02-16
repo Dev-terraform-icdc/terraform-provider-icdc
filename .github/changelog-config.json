@@ -1,0 +1,13 @@
+{
+  "categories": [
+    { "title": "## Breaking Changes 🛠", "labels": ["breaking-change"] },
+    { "title": "## New Features 🎉", "labels": ["feature", "feat"] },
+    { "title": "## Updated Functionality ⚙", "labels": ["enhancement", "enhancement-provider"] },
+    { "title": "## Bug Fixes 🐞", "labels": ["bug", "fix"] },
+    { "title": "## Miscellaneous 📚", "labels": ["misc", "docs", "documentation"] }
+  ],
+  "ignore_labels": ["ignore-for-release", "bot"],
+  "template": "#{{CHANGELOG}}",
+  "pr_template": "- #{{NUMBER}} - @{{AUTHOR}} - {{TITLE}}",
+  "empty_template": "- No changes in this release."
+}
