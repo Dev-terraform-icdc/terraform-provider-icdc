@@ -16,7 +16,7 @@ type CloudGateway struct {
 type AlbRouteApi struct {
 	Route AlbRoute `json:"route"`
 }
-
+//for test
 type AlbRoute struct {
 	Id                 int          `json:"id,omitempty"`
 	Name               string       `json:"name"`
