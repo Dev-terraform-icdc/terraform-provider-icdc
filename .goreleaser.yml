@@ -1,3 +1,4 @@
+version: 2
 project_name: terraform-provider-icdc
 
 before:
@@ -43,3 +44,8 @@ signs:
       - "${artifact}"
 changelog:
   disable: true
+
+
+release:
+  draft: false 
+  prerelease: auto

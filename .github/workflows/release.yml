@@ -8,65 +8,8 @@ permissions:
   contents: write
 
 jobs:
-  build_check:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-          cache: true
-
-      # 1. Генерируем changelog (используем outputs вместо файла)
-      - name: Build Changelog (Dry Run)
-        id: build_changelog
-        uses: mikepenz/release-changelog-builder-action@v4
-        with:
-          configuration: ".github/changelog-config.json"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # 2. ГАРАНТИРОВАННО создаем файл и показываем его
-      - name: 📝 Write & Preview Changelog
-        run: |
-          # Сохраняем вывод экшена в файл вручную
-          echo "${{ steps.build_changelog.outputs.changelog }}" > release-notes.md
-          
-          echo "------------------------------------------------"
-          echo "PREVIEW OF RELEASE NOTES:"
-          echo "------------------------------------------------"
-          cat release-notes.md
-          echo "------------------------------------------------"
-
-      # 3. Импортируем GPG (нужен для snapshot)
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v6
-        id: import_gpg
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          passphrase: ${{ secrets.PASSPHRASE }}
-
-      # 4. Проверяем сборку
-      - name: Check Release Build (Snapshot)
-        uses: goreleaser/goreleaser-action@v6
-        with:
-          distribution: goreleaser
-          version: latest
-          args: release --snapshot --clean --release-notes=release-notes.md
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
-
   release:
-    needs: build_check
     runs-on: ubuntu-latest
-    environment: production
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -79,15 +22,6 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
-      - name: Build Changelog
-        id: build_changelog
-        uses: mikepenz/release-changelog-builder-action@v4
-        with:
-          configuration: ".github/changelog-config.json"
-          outputFile: "release-notes.md"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@v6
         id: import_gpg
@@ -95,12 +29,36 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.PASSPHRASE }}
 
-      - name: Run GoReleaser (Final)
+      # ШАГ 1: GoReleaser. 
+      # Он создает релиз и заливает файлы. Но описание будет пустым (или дефолтным).
+      # Мы НЕ передаем ему release-notes.md
+      - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean --release-notes=release-notes.md
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
+
+      # ШАГ 2: Генерируем Changelog в файл (как у DO)
+      - name: Generate Changelog
+        id: build_changelog
+        uses: mikepenz/release-changelog-builder-action@v4
+        with:
+          configuration: ".github/changelog-config.json"
+          outputFile: "release_notes.md"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ШАГ 3: Обновляем релиз текстом (как у DO)
+      # Используем softprops/action-gh-release, чтобы "дописать" changelog в существующий релиз
+      - name: Update Release with Notes
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: release_notes.md # На всякий случай прикладываем как файл
+          body_path: release_notes.md # Читаем файл и вставляем текст в описание релиза
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
