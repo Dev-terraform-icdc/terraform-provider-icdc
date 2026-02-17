@@ -1,19 +1,19 @@
 {
   "categories": [
-    { "title": "## 🚀 New Features", "labels": ["feat", "feature"] },
-    { "title": "## 🐛 Bug Fixes", "labels": ["fix", "bug"] },
-    { "title": "## 📖 Documentation", "labels": ["docs", "documentation"] },
-    { "title": "## 📦 Maintenance & Chore", "labels": ["chore", "build", "ci", "test"] },
+    { "title": "## 🚀 Features", "labels": ["feat", "feature"] },
+    { "title": "## 🐛 Fixes", "labels": ["fix", "bug"] },
+    { "title": "## 📖 Documentation", "labels": ["docs", "doc", "documentation"] },
+    { "title": "## 📦 Maintenance", "labels": ["chore", "build", "ci", "test"] },
     { "title": "## 🧺 Other Changes", "labels": [] }
   ],
   "template": "#{{CHANGELOG}}",
-  "pr_template": "- #{{NUMBER}} {{TITLE}} (@{{AUTHOR}})",
+  "pr_template": "- [#{{NUMBER}}]({{URL}}) - #{{TITLE}} (@#{{AUTHOR}})",
   "empty_template": "- No significant changes found.",
   "sort": "ASC",
   "ignore_labels": ["ignore-for-release"],
   "label_extractor": [
     {
-      "pattern": "^(feat|fix|docs|chore|build|ci|test)(\\(.+\\))?:.+",
+      "pattern": "^(feat|fix|docs|chore|build|ci|test).+",
       "target": "$1"
     }
   ]
