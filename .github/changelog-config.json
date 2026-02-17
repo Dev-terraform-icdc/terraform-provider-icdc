@@ -1,13 +1,20 @@
 {
   "categories": [
-    { "title": "## Breaking Changes 🛠", "labels": ["breaking-change"] },
-    { "title": "## New Features 🎉", "labels": ["feature", "feat"] },
-    { "title": "## Updated Functionality ⚙", "labels": ["enhancement", "enhancement-provider"] },
-    { "title": "## Bug Fixes 🐞", "labels": ["bug", "fix"] },
-    { "title": "## Miscellaneous 📚", "labels": ["misc", "docs", "documentation"] }
+    { "title": "## 🚀 New Features", "labels": ["feat", "feature"] },
+    { "title": "## 🐛 Bug Fixes", "labels": ["fix", "bug"] },
+    { "title": "## 📖 Documentation", "labels": ["docs", "documentation"] },
+    { "title": "## 📦 Maintenance & Chore", "labels": ["chore", "build", "ci", "test"] },
+    { "title": "## 🧺 Other Changes", "labels": [] }
   ],
-  "ignore_labels": ["ignore-for-release", "bot"],
   "template": "#{{CHANGELOG}}",
-  "pr_template": "- [#{{NUMBER}}]({{URL}}) - {{TITLE}} (@{{AUTHOR}})",
-  "empty_template": "- No changes in this release."
+  "pr_template": "- #{{NUMBER}} {{TITLE}} (@{{AUTHOR}})",
+  "empty_template": "- No significant changes found.",
+  "sort": "ASC",
+  "ignore_labels": ["ignore-for-release"],
+  "label_extractor": [
+    {
+      "pattern": "^(feat|fix|docs|chore|build|ci|test)(\\(.+\\))?:.+",
+      "target": "$1"
+    }
+  ]
 }
