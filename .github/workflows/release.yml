@@ -7,8 +7,7 @@ on:
 permissions:
   contents: write
 
-jobs:
-  build_check:
+build_check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -22,8 +21,7 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
-      # ДОБАВИЛИ: Тестовая генерация changelog
-      # Это сразу проверит, валиден ли твой JSON конфиг и создается ли файл
+      # 1. Генерируем changelog (проверка конфига)
       - name: Build Changelog (Dry Run)
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v4
@@ -33,17 +31,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # ИЗМЕНИЛИ: Вместо 'build' делаем 'release --snapshot'
-      # Это проверит весь процесс упаковки и подстановки release-notes
+      # 2. ВАЖНО: Импортируем GPG ключ (без него build --snapshot упадет на подписи)
+      - name: Import GPG key
+        uses: crazy-max/ghaction-import-gpg@v6
+        id: import_gpg
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.PASSPHRASE }}
+
+      # 3. Проверяем сборку релиза (Snapshot)
       - name: Check Release Build (Snapshot)
         uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser
           version: latest
-          # --snapshot не публикует релиз, но проверяет всё остальное
           args: release --snapshot --clean --release-notes=release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }} # <--- Теперь переменная существует
 
   release:
     needs: build_check
