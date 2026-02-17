@@ -3,17 +3,17 @@
     { "title": "## 🚀 Features", "labels": ["feat", "feature"] },
     { "title": "## 🐛 Fixes", "labels": ["fix", "bug"] },
     { "title": "## 📖 Documentation", "labels": ["docs", "doc", "documentation"] },
-    { "title": "## 📦 Maintenance", "labels": ["chore", "build", "ci", "test"] },
+    { "title": "## 📦 Maintenance", "labels": ["chore", "build", "ci", "test", "perf", "refactor", "style"] },
     { "title": "## 🧺 Other Changes", "labels": [] }
   ],
   "template": "#{{CHANGELOG}}",
-  "pr_template": "- [#{{NUMBER}}]({{URL}}) - #{{TITLE}} (@#{{AUTHOR}})",
+  "pr_template": "- [#{{NUMBER}}](https://github.com/#{{OWNER}}/#{{REPO}}/pull/#{{NUMBER}}) - #{{TITLE}} (@#{{AUTHOR}})",
   "empty_template": "- No significant changes found.",
   "sort": "ASC",
   "ignore_labels": ["ignore-for-release"],
   "label_extractor": [
     {
-      "pattern": "^(feat|fix|docs|chore|build|ci|test).+",
+      "pattern": "^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test).+",
       "target": "$1"
     }
   ]
