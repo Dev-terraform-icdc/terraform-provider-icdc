@@ -8,6 +8,6 @@
   ],
   "ignore_labels": ["ignore-for-release", "bot"],
   "template": "#{{CHANGELOG}}",
-  "pr_template": "- #{{NUMBER}} - @{{AUTHOR}} - {{TITLE}}",
+  "pr_template": "- [#{{NUMBER}}]({{URL}}) - {{TITLE}} (@{{AUTHOR}})",
   "empty_template": "- No changes in this release."
 }

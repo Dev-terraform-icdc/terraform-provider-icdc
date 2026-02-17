@@ -51,6 +51,7 @@ jobs:
         uses: mikepenz/release-changelog-builder-action@v4
         with:
           configuration: ".github/changelog-config.json"
+          outputFile: "release-notes.md"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -66,7 +67,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean --release-notes=<(echo "${{ steps.build_changelog.outputs.changelog }}")
+          args: release --clean --release-notes=release-notes.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GPG_FINGERPRINT: ${{ steps.import_gpg.outputs.fingerprint }}
