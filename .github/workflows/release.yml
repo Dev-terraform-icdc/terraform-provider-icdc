@@ -22,19 +22,21 @@ jobs:
           go-version-file: 'go.mod'
           cache: true
 
-      # 1. Генерируем changelog
+      # 1. Генерируем changelog (используем outputs вместо файла)
       - name: Build Changelog (Dry Run)
         id: build_changelog
         uses: mikepenz/release-changelog-builder-action@v4
         with:
           configuration: ".github/changelog-config.json"
-          outputFile: "release-notes.md"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # 2. НОВЫЙ ШАГ: Выводим changelog в консоль, чтобы ты мог его проверить
-      - name: 🔍 Preview Changelog
+      # 2. ГАРАНТИРОВАННО создаем файл и показываем его
+      - name: 📝 Write & Preview Changelog
         run: |
+          # Сохраняем вывод экшена в файл вручную
+          echo "${{ steps.build_changelog.outputs.changelog }}" > release-notes.md
+          
           echo "------------------------------------------------"
           echo "PREVIEW OF RELEASE NOTES:"
           echo "------------------------------------------------"
