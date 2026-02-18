@@ -77,7 +77,7 @@ func Provider() *schema.Provider {
 		ConfigureContextFunc: providerConfigure,
 	}
 }
-
+// ttest
 func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}, diag.Diagnostics) {
 	username := d.Get("username").(string)
 	password := d.Get("password").(string)
