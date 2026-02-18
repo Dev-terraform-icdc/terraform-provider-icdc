@@ -31,7 +31,7 @@ func getJwt(username, password, ssoUrl, ssoRealm, ssoClientId string) (Jwt, diag
 	client := &http.Client{
 		Timeout: time.Second * 10,
 	}
-
+// test
 	reqUrl := fmt.Sprintf("https://%s/realms/%s/protocol/openid-connect/token", ssoUrl, ssoRealm)
 	data := url.Values{}
 
