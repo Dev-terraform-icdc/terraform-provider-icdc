@@ -7,14 +7,16 @@
     { "title": "## 🧺 Other Changes", "labels": [] }
   ],
   "template": "#{{CHANGELOG}}",
-  "pr_template": "- [#{{NUMBER}}](https://github.com/#{{OWNER}}/#{{REPO}}/pull/#{{NUMBER}}) - #{{TITLE}} (@#{{AUTHOR}})",
+  "pr_template": "- [#{{NUMBER}}]({{URL}}) - #{{TITLE}} (@#{{AUTHOR}})",
   "empty_template": "- No significant changes found.",
   "sort": "ASC",
   "ignore_labels": ["ignore-for-release"],
   "label_extractor": [
     {
-      "pattern": "^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test).*",
-      "target": "$1"
+      "pattern": "(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)",
+      "target": "$1",
+      "flags": "i",
+      "on_property": "title"
     }
   ]
 }
