@@ -7,14 +7,32 @@
     { "title": "## 🧺 Other Changes", "labels": [] }
   ],
   "template": "#{{CHANGELOG}}",
-  "pr_template": "- [#{{NUMBER}}]({{URL}}) - #{{TITLE}} (@#{{AUTHOR}})",
+  "pr_template": "- #{{TITLE}} (@#{{AUTHOR}})",
   "empty_template": "- No significant changes found.",
   "sort": "ASC",
   "ignore_labels": ["ignore-for-release"],
   "label_extractor": [
     {
-      "pattern": "(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)",
-      "target": "$1",
+      "pattern": ".*(docs|doc).*",
+      "target": "docs",
+      "flags": "i",
+      "on_property": "title"
+    },
+    {
+      "pattern": ".*(feat|feature).*",
+      "target": "feat",
+      "flags": "i",
+      "on_property": "title"
+    },
+    {
+      "pattern": ".*(fix|bug).*",
+      "target": "fix",
+      "flags": "i",
+      "on_property": "title"
+    },
+    {
+      "pattern": ".*(chore|build|ci|test|perf|refactor|style).*",
+      "target": "chore",
       "flags": "i",
       "on_property": "title"
     }
