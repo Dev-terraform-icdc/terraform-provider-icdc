@@ -191,7 +191,7 @@ func resourceInstanceGroupCreate(ctx context.Context, d *schema.ResourceData, m 
 			},
 		},
 	}
-
+// test
 	requestBody, err := json.Marshal(serviceRequest)
 	if err != nil {
 		return append(diags, diag.FromErr(err)...)
