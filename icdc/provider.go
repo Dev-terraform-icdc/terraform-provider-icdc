@@ -90,7 +90,7 @@ func providerConfigure(ctx context.Context, d *schema.ResourceData) (interface{}
 	var diags diag.Diagnostics
 
 	jwt, err := getJwt(username, password, ssoUrl, ssoRealm, ssoClientId)
-
+	// test32
 	if err != nil {
 		return nil, err
 	}
