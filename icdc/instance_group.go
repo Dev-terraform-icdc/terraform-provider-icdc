@@ -58,6 +58,14 @@ func instancesCount(serviceId string) (int, diag.Diagnostics) {
 		return 0, append(diags, diag.FromErr(err)...)
 	}
 
+	bodyString, prettyErr := PrettyStruct(service)
+	// Proper debug log handling.
+	if prettyErr == nil {
+		log.Printf("[DEBUG] API response body for service %s:\n%s", serviceId, bodyString)
+	} else {
+		log.Printf("[DEBUG] Failed to format response body: %s", prettyErr)
+	}
+
 	return len(service.Vms), nil
 }
 
@@ -77,7 +85,17 @@ func fetchInstanceList(serviceId string) ([]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	bodyString, prettyErr := PrettyStruct(service)
+	// Proper debug log handling.
+	if prettyErr == nil {
+		log.Printf("[DEBUG] API response body for service %s:\n%s", serviceId, bodyString)
+	} else {
+		log.Printf("[DEBUG] Failed to format response body: %s", prettyErr)
+	}
+	return buildInstanceListFromService(service), nil
+}
 
+func buildInstanceListFromService(service *Service) []interface{} {
 	instances := service.Vms
 	instancesList := make([]interface{}, len(instances))
 	vmsAllocations, _ := vmsAllocationsList(service.Networks)
@@ -113,7 +131,7 @@ func fetchInstanceList(serviceId string) ([]interface{}, error) {
 		instancesList[ndx] = i
 	}
 
-	return instancesList, nil
+	return instancesList
 }
 
 func vmsAllocationsList(networks []ComputeNetwork) ([]VmAllocation, error) {
