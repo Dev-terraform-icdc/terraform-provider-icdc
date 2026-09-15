@@ -1,7 +1,11 @@
 package icdc
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 )
 
 type SecurityGroup struct {
@@ -100,22 +104,30 @@ func securityGroupList() ([]SecurityGroup, error) {
 	return securityGroupCollection.Resources, nil
 }
 
+var errSecurityGroupNotFound = errors.New("security group not found")
+
 func fetchSecurityGroup(id string) (SecurityGroup, error) {
-	requestUrl := fmt.Sprintf("api/compute/v1/security_groups/%s?expand=resources&attributes=firewall_rules", id)
-
-	responseBody, err := requestApi("GET", requestUrl, nil)
-
-	if err != nil {
-		return SecurityGroup{}, fmt.Errorf("can't fetch security group: %s", err)
+	if id == "" {
+		return SecurityGroup{}, fmt.Errorf("cannot fetch security group without an ID")
 	}
-
-	var securityGroup SecurityGroup
-
-	err = responseBody.Decode(&securityGroup)
-
+	path := fmt.Sprintf("api/compute/v1/security_groups/%s?expand=resources&attributes=firewall_rules", url.PathEscape(id))
+	response, err := requestApiResponse("GET", path, nil)
 	if err != nil {
-		return SecurityGroup{}, fmt.Errorf("can't decode security group: %s", err)
+		return SecurityGroup{}, fmt.Errorf("can't fetch security group: %w", err)
 	}
-
-	return securityGroup, nil
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusNotFound {
+		return SecurityGroup{}, fmt.Errorf("%w: %s", errSecurityGroupNotFound, id)
+	}
+	if response.StatusCode != http.StatusOK {
+		return SecurityGroup{}, fmt.Errorf("can't fetch security group: HTTP %d", response.StatusCode)
+	}
+	var group SecurityGroup
+	if err := json.NewDecoder(response.Body).Decode(&group); err != nil {
+		return SecurityGroup{}, fmt.Errorf("can't decode security group: %w", err)
+	}
+	if group.Id != id || group.Name == "" || group.EmsRef == "" {
+		return SecurityGroup{}, fmt.Errorf("invalid security group response: missing fields or mismatched ID")
+	}
+	return group, nil
 }

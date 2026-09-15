@@ -10,6 +10,15 @@ import (
 )
 
 func requestApi(method, url string, body io.Reader) (*json.Decoder, error) {
+	r, err := requestApiResponse(method, url, body)
+	if err != nil {
+		return nil, err
+	}
+	return json.NewDecoder(r.Body), nil
+}
+
+// requestApiResponse lets callers inspect HTTP status and close the response body.
+func requestApiResponse(method, url string, body io.Reader) (*http.Response, error) {
 	client := &http.Client{Timeout: 100 * time.Second}
 
 	req, err := http.NewRequest(method, fmt.Sprintf("%s/%s", os.Getenv("API_GATEWAY"), url), body)
@@ -25,18 +34,7 @@ func requestApi(method, url string, body io.Reader) (*json.Decoder, error) {
 	req.Header.Set("x-auth-group", os.Getenv("AUTH_GROUP"))
 	req.Header.Set("x-miq-group", os.Getenv("AUTH_GROUP"))
 
-	r, err := client.Do(req)
-
-	if err != nil {
-		return nil, err
-	}
-
-	decodedBody := json.NewDecoder(r.Body)
-
-	/* ahrechushkin: so, we need to close the body, but we can't do it here, because we need to return the body to the caller
-	defer r.Body.Close()
-	*/
-	return decodedBody, nil
+	return client.Do(req)
 }
 
 func PrettyStruct(data interface{}) (string, error) {

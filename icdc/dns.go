@@ -1,10 +1,43 @@
 package icdc
 
 import (
+	"encoding/json"
+	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
+
+// readDnsList validates the envelope before a caller treats an absent item as deleted.
+// A missing collection endpoint is an error, not proof that a resource was deleted.
+func readDnsList(path string, result interface{}) error {
+	response, err := requestApiResponse("GET", path, nil)
+	if err != nil {
+		return fmt.Errorf("error fetching DNS list: %w", err)
+	}
+	defer response.Body.Close()
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("error fetching DNS list: HTTP %d", response.StatusCode)
+	}
+	var envelope struct {
+		Status int             `json:"status"`
+		Data   json.RawMessage `json:"data"`
+	}
+	if err := json.NewDecoder(response.Body).Decode(&envelope); err != nil {
+		return fmt.Errorf("error decoding DNS list: %w", err)
+	}
+	if envelope.Status != http.StatusOK {
+		return fmt.Errorf("error fetching DNS list: API status %d", envelope.Status)
+	}
+	if len(envelope.Data) == 0 || string(envelope.Data) == "null" {
+		return fmt.Errorf("invalid DNS list: missing data array")
+	}
+	if err := json.Unmarshal(envelope.Data, result); err != nil {
+		return fmt.Errorf("error decoding DNS list data: %w", err)
+	}
+	return nil
+}
 
 type DnsZone struct {
 	Name string `json:"name"`

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/retry"
@@ -198,6 +199,27 @@ func resourceSecurityGroupUpdate(ctx context.Context, d *schema.ResourceData, m 
 }
 
 func resourceSecurityGroupRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	securityGroup, err := fetchSecurityGroup(d.Id())
+	if errors.Is(err, errSecurityGroupNotFound) {
+		d.SetId("")
+		return nil
+	}
+	if err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+
+	err = d.Set("ems_ref", securityGroup.EmsRef)
+	if err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+
+	err = d.Set("name", securityGroup.Name)
+	if err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+
 	return nil
 }
 

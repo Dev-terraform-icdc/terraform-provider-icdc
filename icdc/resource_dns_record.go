@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
@@ -69,6 +71,34 @@ func resourceDnsRecord() *schema.Resource {
 }
 
 func resourceDnsRecordRead(d *schema.ResourceData, m interface{}) error {
+	zone := d.Get("zone").(string)
+	if zone == "" {
+		return fmt.Errorf("cannot read DNS record without a zone")
+	}
+	var records []DnsRecordDetails
+	if err := readDnsList(fmt.Sprintf("api/dns/v1/zones/%s/records", url.PathEscape(zone)), &records); err != nil {
+		return err
+	}
+	for _, record := range records {
+		if fmt.Sprintf("%s.%s", record.Id, record.Name) != d.Id() {
+			continue
+		}
+		recordType := record.Type
+		if current := d.Get("type").(string); strings.EqualFold(current, recordType) {
+			recordType = current
+		}
+		for key, value := range map[string]interface{}{
+			"name": record.Name, "type": recordType, "data": record.Data,
+			"ttl": record.Ttl, "group": record.Group, "priority": record.Priority,
+			"weight": record.Weight, "port": record.Port,
+		} {
+			if err := d.Set(key, value); err != nil {
+				return fmt.Errorf("error setting DNS record %s: %w", key, err)
+			}
+		}
+		return nil
+	}
+	d.SetId("")
 	return nil
 }
 

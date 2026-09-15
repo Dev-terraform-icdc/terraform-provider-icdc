@@ -29,6 +29,16 @@ func resourceDnsZone() *schema.Resource {
 }
 
 func resourceDnsZoneRead(d *schema.ResourceData, m interface{}) error {
+	var zones []DnsZone
+	if err := readDnsList("api/dns/v1/zones", &zones); err != nil {
+		return err
+	}
+	for _, zone := range zones {
+		if zone.Name == d.Id() {
+			return d.Set("name", zone.Name)
+		}
+	}
+	d.SetId("")
 	return nil
 }
 

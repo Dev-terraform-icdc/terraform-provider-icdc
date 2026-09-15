@@ -7,17 +7,21 @@ import (
 )
 
 type SecurityRule struct {
-	Action          string `json:"action,omitempty"`
-	Id              string `json:"id,omitempty"`
-	Direction       string `json:"direction,omitempty"`
-	PortRangeMin    string `json:"port_range_min,omitempty"`
-	PortRangeMax    string `json:"port_range_max,omitempty"`
-	Protocol        string `json:"protocol,omitempty"`
-	NetworkProtocol string `json:"network_protocol,omitempty"`
-	RemoteGroupId   string `json:"remote_group_id,omitempty"`
-	SecurityGroupId string `json:"security_group_id,omitempty"`
-	SourceIpRange   string `json:"source_ip_range,omitempty"`
-	EmsRef          string `json:"ems_ref,omitempty"`
+	Action                string      `json:"action,omitempty"`
+	Id                    string      `json:"id,omitempty"`
+	Direction             string      `json:"direction,omitempty"`
+	PortRangeMin          string      `json:"port_range_min,omitempty"`
+	PortRangeMax          string      `json:"port_range_max,omitempty"`
+	Port                  interface{} `json:"port,omitempty"`
+	EndPort               interface{} `json:"end_port,omitempty"`
+	Protocol              string      `json:"protocol,omitempty"`
+	HostProtocol          string      `json:"host_protocol,omitempty"`
+	NetworkProtocol       string      `json:"network_protocol,omitempty"`
+	RemoteGroupId         string      `json:"remote_group_id,omitempty"`
+	SourceSecurityGroupId string      `json:"source_security_group_id,omitempty"`
+	SecurityGroupId       string      `json:"security_group_id,omitempty"`
+	SourceIpRange         string      `json:"source_ip_range,omitempty"`
+	EmsRef                string      `json:"ems_ref,omitempty"`
 }
 
 type MiqTaskDelete struct {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -168,7 +169,142 @@ func resourceSecurityRuleUpdate(ctx context.Context, d *schema.ResourceData, m i
 }
 
 func resourceSecurityRuleRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	securityGroup, err := fetchSecurityGroup(d.Get("group_id").(string))
+	if errors.Is(err, errSecurityGroupNotFound) {
+		d.SetId("")
+		return nil
+	}
+	if err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+
+	// An omitted or null collection does not confirm that a rule was deleted.
+	if securityGroup.SecurityGroupRules == nil {
+		return diag.Errorf("invalid security group response: missing firewall_rules array")
+	}
+	for _, rule := range securityGroup.SecurityGroupRules {
+		if rule.Id == "" {
+			return diag.Errorf("invalid security group response: rule without ID")
+		}
+	}
+	var securityRule SecurityRule
+	for _, r := range securityGroup.SecurityGroupRules {
+		if r.Id == d.Id() {
+			securityRule = r
+			break
+		}
+	}
+
+	if securityRule.Id == "" {
+		d.SetId("")
+		return nil
+	}
+
+	direction := normalizeSecurityRuleDirection(securityRule.Direction)
+	networkProtocol := strings.ToLower(securityRule.NetworkProtocol)
+	if securityRule.EmsRef == "" || (direction != "ingress" && direction != "egress") || (networkProtocol != "ipv4" && networkProtocol != "ipv6") {
+		return diag.Errorf("invalid security rule response: missing or invalid required fields")
+	}
+	err = d.Set("ems_ref", securityRule.EmsRef)
+	if err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+
+	err = d.Set("direction", normalizeSecurityRuleDirection(securityRule.Direction))
+	if err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+
+	err = d.Set("port_range", securityRulePortRange(securityRule))
+	if err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+
+	err = d.Set("protocol", securityRuleProtocol(securityRule))
+	if err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+
+	err = d.Set("network_protocol", strings.ToLower(securityRule.NetworkProtocol))
+	if err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+
+	err = d.Set("remote_group_id", securityRuleRemoteGroupId(securityRule))
+	if err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+
+	err = d.Set("remote_ip_subnet", securityRule.SourceIpRange)
+	if err != nil {
+		return append(diags, diag.FromErr(err)...)
+	}
+
 	return nil
+}
+
+func normalizeSecurityRuleDirection(direction string) string {
+	switch strings.ToLower(direction) {
+	case "inbound":
+		return "ingress"
+	case "outbound":
+		return "egress"
+	default:
+		return strings.ToLower(direction)
+	}
+}
+
+func securityRulePortRange(rule SecurityRule) string {
+	rangeMin := securityRuleValueToString(rule.PortRangeMin)
+	if rangeMin == "" {
+		rangeMin = securityRuleValueToString(rule.Port)
+	}
+
+	rangeMax := securityRuleValueToString(rule.PortRangeMax)
+	if rangeMax == "" {
+		rangeMax = securityRuleValueToString(rule.EndPort)
+	}
+
+	if rangeMin == "" {
+		return ""
+	}
+
+	if rangeMax == "" || rangeMax == rangeMin {
+		return rangeMin
+	}
+
+	return fmt.Sprintf("%s-%s", rangeMin, rangeMax)
+}
+
+func securityRuleProtocol(rule SecurityRule) string {
+	if rule.Protocol != "" {
+		return strings.ToLower(rule.Protocol)
+	}
+
+	return strings.ToLower(rule.HostProtocol)
+}
+
+func securityRuleRemoteGroupId(rule SecurityRule) string {
+	if rule.RemoteGroupId != "" {
+		return rule.RemoteGroupId
+	}
+
+	return rule.SourceSecurityGroupId
+}
+
+func securityRuleValueToString(value interface{}) string {
+	switch v := value.(type) {
+	case nil:
+		return ""
+	case string:
+		return v
+	case float64:
+		return fmt.Sprintf("%g", v)
+	default:
+		return fmt.Sprint(v)
+	}
 }
 
 func resourceSecurityRuleDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {

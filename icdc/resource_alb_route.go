@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
@@ -170,62 +171,80 @@ func resourceAlbRouteCreate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceAlbRouteRead(d *schema.ResourceData, m interface{}) error {
-	requestUrl := fmt.Sprintf("api/traefik_manager/v1/routes/%s", d.Id())
-
-	responseBody, err := requestApi("GET", requestUrl, nil)
-
+	response, err := requestApiResponse("GET", fmt.Sprintf("api/traefik_manager/v1/routes/%s", d.Id()), nil)
 	if err != nil {
-		return fmt.Errorf("error fetching alb route: %s", err)
+		return fmt.Errorf("error fetching alb route: %w", err)
 	}
-
-	var routeResponse AlbRouteApi
-
-	err = responseBody.Decode(&routeResponse)
-
-	route := routeResponse.Route
-
-	if err != nil {
-		return fmt.Errorf("error decoding alb route response: %s", err)
+	defer response.Body.Close()
+	if response.StatusCode == http.StatusNotFound {
+		d.SetId("")
+		return nil
 	}
-
-	err = d.Set("name", route.Name)
-
-	if err != nil {
-		return fmt.Errorf("error setting value: %s", err)
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("error fetching alb route: HTTP %d", response.StatusCode)
 	}
-
-	err = d.Set("hostname", route.Hostname)
-
-	if err != nil {
-		return fmt.Errorf("error setting value: %s", err)
+	var result AlbRouteApi
+	if err := json.NewDecoder(response.Body).Decode(&result); err != nil {
+		return fmt.Errorf("error decoding alb route: %w", err)
 	}
-
-	err = d.Set("path", route.Path)
-
-	if err != nil {
-		return fmt.Errorf("error setting value: %s", err)
+	route := result.Route
+	if route == nil || strconv.Itoa(route.Id) != d.Id() {
+		return fmt.Errorf("invalid alb route response: missing or mismatched route ID")
 	}
-
-	err = d.Set("target_port", route.TargetPort)
-
-	if err != nil {
-		return fmt.Errorf("error setting value: %s", err)
+	ipVersion, err := strconv.Atoi(route.IpVersion.String())
+	if err != nil || (ipVersion != 4 && ipVersion != 6) {
+		return fmt.Errorf("invalid alb route IP version: %q", route.IpVersion)
 	}
-
-	err = d.Set("insecure", route.Insecure)
-
-	if err != nil {
-		return fmt.Errorf("error setting value: %s", err)
+	if route.CloudGateway == nil || route.CloudGateway.Name == "" {
+		return fmt.Errorf("invalid alb route response: missing cloud gateway name")
 	}
-
-	err = d.Set("tls_termination", route.TlsTermination)
-
-	if err != nil {
-		return fmt.Errorf("error setting value: %s", err)
+	services := make([]string, 0, len(route.Services))
+	remaining := make(map[string]bool)
+	for _, service := range route.Services {
+		if service.ExtId <= 0 {
+			return fmt.Errorf("invalid alb service: missing ext_id")
+		}
+		remaining[strconv.Itoa(service.ExtId)] = true
 	}
-
-	// ahrechushkin: in v1.0.0 we doesn't support in-place update healthcheck
-
+	// API ordering is not significant; retain the order of existing members.
+	for _, current := range d.Get("services").([]interface{}) {
+		id := current.(string)
+		if remaining[id] {
+			services = append(services, id)
+			delete(remaining, id)
+		}
+	}
+	for _, service := range route.Services {
+		id := strconv.Itoa(service.ExtId)
+		if remaining[id] {
+			services = append(services, id)
+			delete(remaining, id)
+		}
+	}
+	healthcheck := []interface{}{}
+	// For the API version tested here, observed responses return healthcheck=null.
+	// TODO: When healthcheck data is returned, verify and extend the mapping below as needed.
+	if route.HealthcheckEnabled {
+		hc := route.Healthcheck
+		if hc == nil {
+			return fmt.Errorf("invalid alb route response: enabled healthcheck is missing")
+		}
+		healthcheck = append(healthcheck, map[string]interface{}{
+			"path": hc.Path, "scheme": hc.Scheme, "hostname": hc.Hostname,
+			"port": hc.Port, "interval": hc.Interval, "timeout": hc.Timeout,
+			"follow_redirects": hc.FollowRedirects, "method": hc.Method,
+		})
+	}
+	for key, value := range map[string]interface{}{
+		"name": route.Name, "hostname": route.Hostname, "path": route.Path,
+		"target_port": route.TargetPort, "insecure": route.Insecure,
+		"tls_termination": route.TlsTermination, "cloudgw_name": route.CloudGateway.Name,
+		"ip_version": ipVersion, "services": services, "healthcheck": healthcheck,
+	} {
+		if err := d.Set(key, value); err != nil {
+			return fmt.Errorf("error setting alb route %s: %w", key, err)
+		}
+	}
 	return nil
 }
 

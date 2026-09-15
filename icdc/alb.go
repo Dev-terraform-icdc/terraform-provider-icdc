@@ -1,6 +1,7 @@
 package icdc
 
 import (
+	"encoding/json"
 	"slices"
 	"strconv"
 
@@ -14,7 +15,37 @@ type CloudGateway struct {
 }
 
 type AlbRouteApi struct {
-	Route AlbRoute `json:"route"`
+	Route *AlbRouteDetails `json:"route"`
+}
+
+type AlbRouteDetails struct {
+	Id                 int           `json:"id"`
+	Name               string        `json:"name"`
+	Hostname           string        `json:"hostname"`
+	Path               string        `json:"path"`
+	TargetPort         int           `json:"target_port"`
+	Insecure           string        `json:"insecure"`
+	TlsTermination     string        `json:"tls_termination"`
+	IpVersion          json.Number   `json:"ip_version"`
+	Services           []AlbService  `json:"services"`
+	HealthcheckEnabled bool          `json:"healthcheck_enabled"`
+	CloudGateway       *CloudGateway `json:"cloud_gateway"`
+	Healthcheck        *Healthcheck  `json:"healthcheck"`
+}
+
+// Accept numeric API responses while preserving the existing create payload.
+func (r *AlbRoute) UnmarshalJSON(data []byte) error {
+	type routeAlias AlbRoute
+	var wire struct {
+		routeAlias
+		IpVersion json.Number `json:"ip_version"`
+	}
+	if err := json.Unmarshal(data, &wire); err != nil {
+		return err
+	}
+	*r = AlbRoute(wire.routeAlias)
+	r.IpVersion = wire.IpVersion.String()
+	return nil
 }
 
 type AlbRoute struct {
